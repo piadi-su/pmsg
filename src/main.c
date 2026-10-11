@@ -1,8 +1,6 @@
 #include <arpa/inet.h> 
 #include <asm-generic/socket.h>
-#include <errno.h> 
 #include <netinet/in.h> 
-#include <signal.h> 
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h>
@@ -13,6 +11,12 @@
 #include <unistd.h> 
 #include <sys/epoll.h> 
 #include <fcntl.h>
+#include <errno.h> 
+#include <signal.h> 
+#include <string.h> 
+
+// my inc
+#include "types.h"
 
 // usegae example
 
@@ -22,13 +26,7 @@
 // POP list_name
 // DATA msg
 
-#define SERVER_IP "0.0.0.0"
-#define PORT 5555
-#define BUFFER_SIZE 4096
-#define MAX_EVENTS 64
 
-
-void set_nonblocking(int fd);
 
 int main(void){
 
@@ -125,6 +123,7 @@ int main(void){
 				}
 
 				char data_buffer[BUFFER_SIZE];
+				memset(data_buffer, 0, sizeof(data_buffer));
 				int read_bytes = read(client_fd, data_buffer, sizeof(data_buffer));
 
 				if(read_bytes <= 0){
@@ -135,8 +134,55 @@ int main(void){
 
 				}
 				else{
-					write(client_fd, data_buffer, read_bytes);
+					
+					//rm possibile new line chars from the input buffer
+					data_buffer[strcspn(data_buffer, "\r\n")] = 0;
+
+					char method[16];
+					char room[64];
+					/*
+					 putting buffer size so it doesent overflow
+					 the max size of the buffer it's
+					 BUFFER_SIZE - 16 - 64
+					 */
+					char message[BUFFER_SIZE];
+
+					// const char *msg_saved = "OK message saved\n";
+
+					int pargs_count = sscanf(data_buffer,"%15s %63s %4095[^\n]",method, room, message);
+
+					if (pargs_count >= 1 && strcmp(method, "PUSH") == 0){
+	
+						if(pargs_count == 3){
+							printf("[DEBUG][PARSED] method: %s, to room: %s, message: %s \n", method, room, message);
+							// : queue_push(room, message);
+							write(client_fd, "OK message saved\r\n",18);
+						}
+						else{
+							write(client_fd, "ERR usage: PUSH <room> <message>\r\n",34);
+						}
+
+					}
+
+					else if (pargs_count >= 1 && strcmp(method, "POP") == 0){
+	
+						if(pargs_count == 2){
+							printf("[DEBUG][PARSED] method: %s, to room: %s\n", method, room);
+							// : char *msg = queue_pop(room);
+							write(client_fd, "DATA <message>\r\n",16);
+						}
+						else{
+							write(client_fd, "ERR usage: POP <room> \r\n",24);
+						}
+					}
+					
+					else{
+						write(client_fd, "ERR UNKNOWN COMMAND\r\n", 21);
+					}
+	
 				}
+
+
 
 			}
 
