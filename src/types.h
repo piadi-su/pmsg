@@ -9,21 +9,26 @@
 
 //list of message in a room
 typedef struct Message {
-    char *payload;          // Il testo del messaggio
-    struct Message *next;   // Puntatore al messaggio successivo nella stessa camera
+    char *payload;          
+    struct Message *next;   
 } Message;
 
 //list of all the rooms 
 typedef struct Queue {
-    char name[64];          // Il nome identificativo della camera (es. "notifiche")
-    Message *head;          // Primo messaggio (da dove si fa POP)
-    Message *tail;          // Ultimo messaggio (dove si fa PUSH)
-    struct Queue *next;     // Puntatore alla prossima camera creata nel sistema
+    char name[64];          
+    Message *head;          
+    Message *tail;          
+	struct Queue *next;     
 } Queue;
 
 
 
 //func
 void set_nonblocking(int fd);
+
+Queue* find_room(const char *room);
+Queue* create_room(const char *room_name);
+int queue_push(const char *room_name, const char *message_text);
+
 
 #endif

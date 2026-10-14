@@ -11,9 +11,9 @@
 #include <unistd.h> 
 #include <sys/epoll.h> 
 #include <fcntl.h>
+#include <string.h> 
 #include <errno.h> 
 #include <signal.h> 
-#include <string.h> 
 
 // my inc
 #include "types.h"
@@ -26,7 +26,7 @@
 // POP list_name
 // DATA msg
 
-
+Queue *room_queue = NULL;
 
 int main(void){
 
@@ -156,6 +156,7 @@ int main(void){
 						if(pargs_count == 3){
 							printf("[DEBUG][PARSED] method: %s, to room: %s, message: %s \n", method, room, message);
 							// : queue_push(room, message);
+							queue_push(room, message);
 							write(client_fd, "OK message saved\r\n",18);
 						}
 						else{
@@ -208,7 +209,111 @@ int main(void){
 }
 
 //for makeing accept, read, write not blocking 
-void set_nonblocking(int fd) {
+void 
+set_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
+
+//---
+
+Queue* find_room(const char *room){
+
+	Queue *i = room_queue;
+
+	while(i != NULL)
+	{
+		if(strcmp(room, i->name) == 0)
+			//return the valid address
+			return i;
+
+		i = i->next;
+	}
+	return NULL;
+}
+
+
+Queue* create_room(const char *room_name){
+	Queue* new_room = malloc(sizeof(Queue));
+	if(new_room == NULL){
+		perror("failed malloc");
+		return NULL;
+	}
+
+	strncpy(new_room->name, room_name, sizeof(new_room->name) -1);
+	
+	//make sure the new_room-> ends with \0
+	new_room->name[sizeof(new_room->name) -1] = '\0';
+	new_room->head = NULL;
+	new_room->tail = NULL;
+
+	new_room->next = room_queue;
+	room_queue = new_room;
+
+	//return * to the new created room
+	return new_room;
+}
+
+
+
+int 
+queue_push(const char *room_name, const char *message_text){
+
+	Queue* target_room = find_room(room_name);
+
+	
+	//check if room exist
+	if(target_room == NULL)
+	{
+		//create the room
+		target_room = create_room(room_name);
+
+		if(target_room == NULL){
+			//memory allc err
+			return -1;
+		}
+
+	}
+	
+	//create the new message
+	Message *new_msg = malloc(sizeof(Message));
+	if(new_msg == NULL){
+		//memory allc err
+		return -1;
+	}
+
+	new_msg->payload = strdup(message_text);
+	new_msg->next = NULL;
+
+	//if the room has no message
+	//head and tails = message
+	if(target_room->head == NULL){
+		target_room->head = new_msg;
+		target_room->tail = new_msg;
+	}
+
+	//insert the new message at the end of the list
+	else{
+		target_room->tail->next = new_msg;
+		target_room->tail = new_msg;
+
+	}
+
+	return 0;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
