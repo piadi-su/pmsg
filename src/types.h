@@ -4,7 +4,7 @@
 
 #define SERVER_IP "0.0.0.0"
 #define PORT 5555
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 8192
 #define MAX_EVENTS 64
 
 //list of message in a room
@@ -26,9 +26,11 @@ typedef struct Queue {
 //func
 void set_nonblocking(int fd);
 
+
 Queue* find_room(const char *room);
-Queue* create_room(const char *room_name);
+Queue* create_room(const char* room_name);
 int queue_push(const char *room_name, const char *message_text);
 
+char* queue_pop(const char* room_name);
 
 #endif

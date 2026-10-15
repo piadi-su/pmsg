@@ -1,6 +1,7 @@
 #include <arpa/inet.h> 
 #include <asm-generic/socket.h>
 #include <netinet/in.h> 
+#include <stddef.h>
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h>
@@ -12,19 +13,16 @@
 #include <sys/epoll.h> 
 #include <fcntl.h>
 #include <string.h> 
-#include <errno.h> 
-#include <signal.h> 
 
 // my inc
 #include "types.h"
 
-// usegae example
-
-// PUSH list_name msg
-// OK MESSAGE_SAVED
+//usage:
+//	   PUSH room_name msg
+//	   OK MESSAGE_SAVED
 //
-// POP list_name
-// DATA msg
+//	   POP room_name 
+//	   DATA msg
 
 Queue *room_queue = NULL;
 
@@ -151,12 +149,16 @@ int main(void){
 
 					int pargs_count = sscanf(data_buffer,"%15s %63s %4095[^\n]",method, room, message);
 
+
+
 					if (pargs_count >= 1 && strcmp(method, "PUSH") == 0){
 	
 						if(pargs_count == 3){
 							printf("[DEBUG][PARSED] method: %s, to room: %s, message: %s \n", method, room, message);
-							// : queue_push(room, message);
+							
+							//push message to room or create room and push message
 							queue_push(room, message);
+
 							write(client_fd, "OK message saved\r\n",18);
 						}
 						else{
@@ -165,18 +167,42 @@ int main(void){
 
 					}
 
+
+
 					else if (pargs_count >= 1 && strcmp(method, "POP") == 0){
 	
 						if(pargs_count == 2){
+
 							printf("[DEBUG][PARSED] method: %s, to room: %s\n", method, room);
-							// : char *msg = queue_pop(room);
-							write(client_fd, "DATA <message>\r\n",16);
+
+							//try to pop msg
+							char *popped_msg = queue_pop(room);
+							if(popped_msg != NULL){
+								
+								char response[BUFFER_SIZE];
+								ssize_t respnse_len = sprintf(response, "DATA %s\r\n", popped_msg);
+								write(client_fd, response, respnse_len);
+
+								free(popped_msg);
+							}
+							
+							//room don't exist || no msg in room
+							//throw the error
+							else{
+								write(client_fd, "ERR ROOM_EMPTY_OR_NOT_FOUND\r\n", 29);
+							}
+
+
 						}
+
 						else{
 							write(client_fd, "ERR usage: POP <room> \r\n",24);
 						}
 					}
 					
+
+
+
 					else{
 						write(client_fd, "ERR UNKNOWN COMMAND\r\n", 21);
 					}
@@ -188,17 +214,10 @@ int main(void){
 			}
 
 
-
-
 		}
 
 	}
 
-
-
-
-
-	
 
 
 	
@@ -208,6 +227,8 @@ int main(void){
     return EXIT_SUCCESS;
 }
 
+
+
 //for makeing accept, read, write not blocking 
 void 
 set_nonblocking(int fd) {
@@ -215,7 +236,8 @@ set_nonblocking(int fd) {
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
-//---
+
+//PUSH
 
 Queue* find_room(const char *room){
 
@@ -303,15 +325,31 @@ queue_push(const char *room_name, const char *message_text){
 
 }
 
+//POP
 
+char* queue_pop(const char* room_name){
 
+	Queue *target_room = find_room(room_name);
+	if(target_room == NULL || target_room->head == NULL){
+		//the room is either empty or not existing 
+		return NULL;
+	}
 
+	//getting the first message
+	Message *pop_msg = target_room->head;
 
+	//moving head to the next one
+	target_room->head = pop_msg->next;
 
+	if(target_room->head == NULL)
+		target_room->tail = NULL;
 
+	char *message_text = pop_msg->payload;
 
+	free(pop_msg);
 
-
+	return message_text;
+}
 
 
 
