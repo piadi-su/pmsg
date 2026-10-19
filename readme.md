@@ -6,7 +6,7 @@ and uses epoll for multiple async connections
 
 ## protocol
 
-pmsg uses a text based protocoll on top of tcp
+pmsg uses a text based protocol on top of tcp
 
 #### ex
 ```txt
