@@ -1,14 +1,14 @@
 # pmsg
 
 pmsg is a simple linux based implementation of a tcp message broker,
-it uses a FIFO data structior to retain all of the data,
+it uses a FIFO data structure to retain all of the data,
 and uses epoll for multiple async connections
 
 ## protocol
 
 pmsg uses a text based protocoll on top of tcp
 
-#### es
+#### ex
 ```txt
 PUSH <room-name> <data for that room>
 OK message saved
@@ -18,12 +18,12 @@ DATA <data for that room>
 ```
 
 ## usage
-to connect to pmsg you can easily realize a client
-with few lines of code. check es_client.py.
-or it's as simple as using something like netcat
-and manually write the commands
+to connect to pmsg you can easily implement a client
+with a few lines of code. check es_client.py.
+or you can simply use using something like netcat
+and manually type the commands
 
-#### es
+#### ex
 ```txt
 nc 127.0.0.1 5555
 PUSH <room-name> ...
